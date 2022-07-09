@@ -161,7 +161,47 @@ sync.Map 保证并发安全，但有一些性能损失，没有len函数
 
 ## 7. channel的用法（使用通信进行共享内存），channel是如何使用的？
 ### 1. 有无缓存的channel的区别
+无缓存的channel，make不用声明数字，cap为0
+
+无缓存的channel，接收方和发送方必须成对存在，否则就会阻塞。
+
+```go
+	ch := make(chan struct{})
+	fmt.Println(cap(ch)) // 0
+	go func() { ch <- struct{}{} }()
+	close(ch)
+	<-ch
+```
+
+| 操作 | nil | closed channel |
+| --- | --- | --- |
+| close | panic | panic |
+| 存入 | 阻塞 | panic |
+| 取出 | 阻塞 | 返回对应类型零值和关闭信号 |
+
+有缓存的channel，make声明的数字即为cap。
+
+```go
+	// 有缓存的channel
+	bufCh := make(chan int, 3)
+	fmt.Println(cap(bufCh)) // 3
+	for i := 0; i < 3; i++ {
+		bufCh <- i
+	}
+	close(bufCh)
+	for i := range bufCh {
+		fmt.Printf("%v ", i) // 0 1 2
+	}
+```
+
+| 操作 | nil | 满 | 空 | closed channel |
+| --- | --- | --- | --- | --- |
+| close | panic | 关闭 | 关闭 | panic |
+| 存入 | 阻塞 | 阻塞 | 成功发送 | panic |
+| 取出 | 阻塞 | 成功接收 | 阻塞 | 空：返回类型零值、false<br />非空：返回相应值、true |
+
 ### 2. channel的底层实现
+
 ### 3. 向 channel 发送数据和从 channel 读数据的流程会怎么样
 ## 8. 锁的用法，实现原理，锁有哪些类，使用场景分别是什么？
 ### 1. Mutex 是悲观锁还是乐观锁？悲观锁、乐观锁是什么
